@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from .models import TweetModel
 from .models import TweetComment
 from django.contrib.auth.decorators import login_required
+from django.views.generic import ListView, TemplateView
 # Create your views here.
 
 
@@ -23,11 +24,19 @@ def tweet(request):
             return redirect('/sign-in')
     elif request.method == 'POST':
         user = request.user
-        my_tweet = TweetModel()
-        my_tweet.author = user
-        my_tweet.content = request.POST.get('my-content', '')
-        my_tweet.save()
-        return redirect('/tweet')
+        content = request.POST.get('my-content', '')
+        tags = request.POST.get('tag', '').split(',')
+        if content == '':
+            all_tweet = TweetModel.objects.all().order_by('-created_at')
+            return render(request, 'tweet/home.html', {'error': '글은 공백일 수 없습니다.', 'tweet':all_tweet})
+        else:
+            my_tweet = TweetModel.objects.create(author=user, content=content)
+            for tag in tags:
+                tag = tag.strip()
+                if tag != '':
+                    my_tweet.tags.add(tag)
+            my_tweet.save()
+            return redirect('/tweet')
 
 
 @login_required
@@ -66,3 +75,19 @@ def delete_comment(request, id):
     comment.delete()
     return redirect('/tweet/'+str(cur_tweet))
 
+
+class TagCloudTV(TemplateView):
+    template_name = 'taggit/tag_cloud_view.html'
+
+
+class TaggedObjectLV(ListView):
+    template_name = 'taggit/tag_with_post.html'
+    model = TweetModel
+
+    def get_queryset(self):
+        return TweetModel.objects.filter(tags__name=self.kwargs.get('tag'))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tagname'] = self.kwargs['tag']
+        return context
