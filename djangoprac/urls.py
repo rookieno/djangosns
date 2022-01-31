@@ -23,4 +23,5 @@ urlpatterns = [
     path('first/', views.first_view,name='first_view'),
     path('', include('user.urls')),
     path('', include('tweet.urls')),
+    path('', include('new.urls'))
 ]
